@@ -1,0 +1,323 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeleChat</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#0a1220;color:#edf5ff}
+button,input{font:inherit}
+button{border:0;border-radius:12px;background:#3489f5;color:white;padding:12px 18px;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+input{min-width:0;padding:13px;border:1px solid #293a51;border-radius:12px;background:#172438;color:white}
+.auth-wrap{min-height:100vh;display:grid;place-items:center;padding:20px}
+.auth{width:min(100%,390px);padding:28px;background:#101b2b;border:1px solid #26364b;border-radius:20px}
+.logo{font-size:28px;font-weight:bold;color:#49a6ff;margin-bottom:12px}
+.auth p{color:#9eb1ca;line-height:1.5}
+.auth form{display:grid;gap:12px}
+.auth input{width:100%}
+.auth .switch{background:transparent;color:#70b6ff;width:100%;margin-top:8px}
+.status{font-size:13px;color:#9eb1ca;margin-top:12px;overflow-wrap:anywhere}
+.error{color:#ff9999}
+.app{display:grid;grid-template-columns:260px 1fr;height:100dvh}
+.sidebar{background:#101b2b;border-right:1px solid #26364b;padding:20px;min-width:0}
+.search{width:100%;margin:12px 0}
+.chat{display:flex;gap:12px;align-items:center;padding:13px 10px;border-radius:12px;color:#c7d8ed}
+.chat.active,.chat:hover{background:#1c3049}
+.avatar{width:44px;height:44px;flex-shrink:0;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#49baff,#3374f3);font-weight:bold}
+.main{display:flex;flex-direction:column;min-width:0}
+.header{padding:18px 20px;border-bottom:1px solid #26364b;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.header small{display:block;color:#9eb1ca;font-weight:normal;margin-top:5px}
+.header button{padding:9px 12px}
+.messages{flex:1;overflow-y:auto;padding:20px}
+.bubble{display:table;max-width:85%;overflow-wrap:anywhere;margin:10px 0;padding:12px 15px;border-radius:15px;background:#1a2b41;white-space:pre-wrap}
+.bubble.mine{margin-left:auto;background:#235da8}
+.bubble b{display:block;font-size:12px;color:#8cc9ff;margin-bottom:6px}
+.bubble time{display:block;font-size:10px;color:#b5c9e3;margin-top:6px}
+.system{text-align:center;color:#9eb1ca;font-size:13px;margin:15px}
+.composer{display:flex;gap:10px;padding:15px;border-top:1px solid #26364b}
+.composer input{flex:1;width:100%}
+.hidden{display:none!important}
+@media(max-width:600px){
+ .app{grid-template-columns:86px minmax(0,1fr)}
+ .sidebar{padding:8px}
+ .logo{font-size:17px;overflow-wrap:anywhere}
+ .search{padding:8px;font-size:12px}
+ .chat{justify-content:center;padding:9px 0}
+ .chat .chat-name{display:none}
+ .avatar{width:42px;height:42px}
+ .header{padding:13px 10px}
+ .header button{font-size:12px;padding:9px}
+ .messages{padding:12px}
+ .composer{padding:9px}
+ .composer button{padding:10px}
+}
+</style>
+</head>
+<body>
+
+<section id="authScreen" class="auth-wrap">
+  <div class="auth">
+    <div class="logo">➤ TeleChat</div>
+    <h2 id="authTitle">Вход в аккаунт</h2>
+    <p>Войди или создай аккаунт, чтобы подключиться к общему чату.</p>
+    <form id="authForm">
+      <input id="username" placeholder="Имя пользователя" minlength="3" maxlength="20" autocomplete="username" required>
+      <input id="password" type="password" placeholder="Пароль (минимум 8 символов)" minlength="8" maxlength="72" autocomplete="current-password" required>
+      <button id="authSubmit" type="submit">Войти</button>
+    </form>
+    <button id="switchAuth" class="switch" type="button">Нет аккаунта? Зарегистрироваться</button>
+    <div id="authStatus" class="status" role="status"></div>
+  </div>
+</section>
+
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="logo">➤ TeleChat</div>
+    <input class="search" id="search" placeholder="Поиск чатов">
+    <div id="chatList">
+      <div class="chat active">
+        <div class="avatar">🌐</div>
+        <div class="chat-name">Общий чат</div>
+      </div>
+      <div class="chat">
+        <div class="avatar">МБ</div>
+        <div class="chat-name">Мой блог</div>
+      </div>
+      <div class="chat">
+        <div class="avatar">ДР</div>
+        <div class="chat-name">Друзья</div>
+      </div>
+      <div class="chat">
+        <div class="avatar">🎮</div>
+        <div class="chat-name">Игры</div>
+      </div>
+      <div class="chat">
+        <div class="avatar">★</div>
+        <div class="chat-name">Избранное</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div>
+        <span id="chatTitle">Общий чат</span>
+        <small id="connectionStatus">Подключение...</small>
+      </div>
+      <button id="logout" type="button">Выйти</button>
+    </header>
+    <section class="messages" id="messages" aria-live="polite"></section>
+    <form class="composer" id="messageForm">
+      <input id="message" placeholder="Написать сообщение..." maxlength="2000" autocomplete="off" required>
+      <button id="sendButton" type="submit">➤</button>
+    </form>
+  </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+let token = localStorage.getItem("telechat_token");
+let currentUser = null;
+let socket = null;
+let registerMode = false;
+let sending = false;
+
+function showAuth(message = "", isError = false) {
+  $("authScreen").classList.remove("hidden");
+  $("app").classList.add("hidden");
+  $("authStatus").textContent = message;
+  $("authStatus").classList.toggle("error", isError);
+}
+
+function showApp() {
+  $("authScreen").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("connectionStatus").textContent = "Подключение...";
+}
+
+$("switchAuth").addEventListener("click", () => {
+  registerMode = !registerMode;
+  $("authTitle").textContent = registerMode ? "Создать аккаунт" : "Вход в аккаунт";
+  $("authSubmit").textContent = registerMode ? "Зарегистрироваться" : "Войти";
+  $("switchAuth").textContent = registerMode
+    ? "Уже есть аккаунт? Войти"
+    : "Нет аккаунта? Зарегистрироваться";
+  $("password").autocomplete = registerMode ? "new-password" : "current-password";
+  $("authStatus").textContent = "";
+});
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: "Bearer " + token } : {}),
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Ошибка запроса");
+  return data;
+}
+
+$("authForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  $("authSubmit").disabled = true;
+  $("authStatus").textContent = "Подожди...";
+
+  try {
+    const result = await api(
+      registerMode ? "/api/register" : "/api/login",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          username: $("username").value.trim(),
+          password: $("password").value
+        })
+      }
+    );
+
+    token = result.token;
+    currentUser = result.user;
+    localStorage.setItem("telechat_token", token);
+    $("password").value = "";
+    await startChat();
+  } catch (error) {
+    showAuth(error.message, true);
+  } finally {
+    $("authSubmit").disabled = false;
+  }
+});
+
+function addMessage(message) {
+  const bubble = document.createElement("div");
+  bubble.className = "bubble" +
+    (currentUser && message.username === currentUser.username ? " mine" : "");
+
+  const name = document.createElement("b");
+  name.textContent = message.username;
+  bubble.appendChild(name);
+
+  const text = document.createElement("div");
+  text.textContent = message.text;
+  bubble.appendChild(text);
+
+  const time = document.createElement("time");
+  const date = new Date(message.createdAt);
+  time.textContent = Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleString("ru-RU");
+  bubble.appendChild(time);
+
+  $("messages").appendChild(bubble);
+  $("messages").scrollTop = $("messages").scrollHeight;
+}
+
+async function startChat() {
+  const me = await api("/api/me");
+  currentUser = me.user;
+  showApp();
+
+  const history = await api("/api/messages");
+  $("messages").innerHTML = "";
+  history.messages.forEach(addMessage);
+
+  if (socket) socket.disconnect();
+
+  socket = io({
+    auth: { token }
+  });
+
+  socket.on("connect", () => {
+    $("connectionStatus").textContent = "В сети · " + currentUser.username;
+  });
+
+  socket.on("disconnect", () => {
+    $("connectionStatus").textContent = "Переподключение...";
+  });
+
+  socket.on("connect_error", error => {
+    $("connectionStatus").textContent = "Ошибка соединения";
+    console.error(error.message);
+  });
+
+  socket.on("chat:new", message => {
+    addMessage(message);
+  });
+}
+
+$("messageForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = $("message");
+  const text = input.value.trim();
+
+  if (!text || !socket || !socket.connected || sending) return;
+
+  sending = true;
+  $("sendButton").disabled = true;
+
+  socket.emit("chat:send", text, result => {
+    sending = false;
+    $("sendButton").disabled = false;
+
+    if (result && result.error) {
+      alert(result.error);
+      return;
+    }
+
+    input.value = "";
+    input.focus();
+  });
+});
+
+$("search").addEventListener("input", event => {
+  const query = event.target.value.toLowerCase();
+  document.querySelectorAll("#chatList .chat").forEach(chat => {
+    chat.classList.toggle(
+      "hidden",
+      !chat.textContent.toLowerCase().includes(query)
+    );
+  });
+});
+
+$("logout").addEventListener("click", async () => {
+  try {
+    await api("/api/logout", { method: "POST" });
+  } catch (error) {
+    console.warn("Не удалось завершить сессию на сервере", error);
+  }
+
+  if (socket) socket.disconnect();
+  socket = null;
+  localStorage.removeItem("telechat_token");
+  token = null;
+  currentUser = null;
+  $("messages").innerHTML = "";
+  showAuth("Ты вышел из аккаунта.");
+});
+
+async function restoreSession() {
+  if (!token) {
+    showAuth();
+    return;
+  }
+
+  try {
+    await startChat();
+  } catch (error) {
+    localStorage.removeItem("telechat_token");
+    token = null;
+    showAuth("Войди в аккаунт, чтобы продолжить.");
+  }
+}
+
+restoreSession();
+</script>
+</body>
+</html>
